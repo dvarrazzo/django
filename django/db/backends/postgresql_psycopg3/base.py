@@ -1,7 +1,7 @@
 """
 PostgreSQL database backend for Django.
 
-Requires psycopg 2: https://www.psycopg.org/
+Requires psycopg3: https://www.psycopg.org/psycopg3/
 """
 
 import asyncio
@@ -18,29 +18,24 @@ from django.db.backends.utils import (
 )
 from django.utils.asyncio import async_unsafe
 from django.utils.functional import cached_property
-from django.utils.safestring import SafeString
+# from django.utils.safestring import SafeString
 from django.utils.version import get_version_tuple
 
 try:
-    import psycopg2 as Database
-    import psycopg2.extensions
-    import psycopg2.extras
+    import psycopg3 as Database
 except ImportError as e:
-    raise ImproperlyConfigured("Error loading psycopg2 module: %s" % e)
+    raise ImproperlyConfigured("Error loading psycopg3 module: %s" % e)
 
 
-def psycopg2_version():
-    version = psycopg2.__version__.split(' ', 1)[0]
+def psycopg3_version():
+    version = Database.__version__
     return get_version_tuple(version)
 
 
-PSYCOPG2_VERSION = psycopg2_version()
-
-if PSYCOPG2_VERSION < (2, 5, 4):
-    raise ImproperlyConfigured("psycopg2_version 2.5.4 or newer is required; you have %s" % psycopg2.__version__)
+PSYCOPG3_VERSION = psycopg3_version()
 
 
-# Some of these import psycopg2, so import them after checking if it's installed.
+# Some of these import psycopg3, so import them after checking if it's installed.
 from .client import DatabaseClient                          # NOQA isort:skip
 from .creation import DatabaseCreation                      # NOQA isort:skip
 from .features import DatabaseFeatures                      # NOQA isort:skip
@@ -48,18 +43,19 @@ from .introspection import DatabaseIntrospection            # NOQA isort:skip
 from .operations import DatabaseOperations                  # NOQA isort:skip
 from .schema import DatabaseSchemaEditor                    # NOQA isort:skip
 
-psycopg2.extensions.register_adapter(SafeString, psycopg2.extensions.QuotedString)
-psycopg2.extras.register_uuid()
+# TODO: psycopg3 Should be automatic
+# psycopg2.extensions.register_adapter(SafeString, psycopg2.extensions.QuotedString)
 
 # Register support for inet[] manually so we don't have to handle the Inet()
+# TODO: psycopg3
 # object on load all the time.
-INETARRAY_OID = 1041
-INETARRAY = psycopg2.extensions.new_array_type(
-    (INETARRAY_OID,),
-    'INETARRAY',
-    psycopg2.extensions.UNICODE,
-)
-psycopg2.extensions.register_type(INETARRAY)
+# INETARRAY_OID = 1041
+# INETARRAY = psycopg2.extensions.new_array_type(
+#     (INETARRAY_OID,),
+#     'INETARRAY',
+#     psycopg2.extensions.UNICODE,
+# )
+# psycopg2.extensions.register_type(INETARRAY)
 
 
 class DatabaseWrapper(BaseDatabaseWrapper):
@@ -191,19 +187,23 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         #   default when no value is explicitly specified in options.
         # - before calling _set_autocommit() because if autocommit is on, that
         #   will set connection.isolation_level to ISOLATION_LEVEL_AUTOCOMMIT.
-        options = self.settings_dict['OPTIONS']
-        try:
-            self.isolation_level = options['isolation_level']
-        except KeyError:
-            self.isolation_level = connection.isolation_level
-        else:
-            # Set the isolation level to the value from OPTIONS.
-            if self.isolation_level != connection.isolation_level:
-                connection.set_session(isolation_level=self.isolation_level)
+        # options = self.settings_dict['OPTIONS']
+
+        # TODO: psycopg3 isolation levels
+        # try:
+        #     self.isolation_level = options['isolation_level']
+        # except KeyError:
+        #     self.isolation_level = connection.isolation_level
+        # else:
+        #     # Set the isolation level to the value from OPTIONS.
+        #     if self.isolation_level != connection.isolation_level:
+        #         connection.set_session(isolation_level=self.isolation_level)
+
         # Register dummy loads() to avoid a round trip from psycopg2's decode
         # to json.dumps() to json.loads(), when using a custom decoder in
         # JSONField.
-        psycopg2.extras.register_default_jsonb(conn_or_curs=connection, loads=lambda x: x)
+        # TODO: equivalent for psycopg3 once merged to master
+        # psycopg2.extras.register_default_jsonb(conn_or_curs=connection, loads=lambda x: x)
         return connection
 
     def ensure_timezone(self):
@@ -234,11 +234,13 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             cursor = self.connection.cursor(name, scrollable=False, withhold=self.connection.autocommit)
         else:
             cursor = self.connection.cursor()
-        cursor.tzinfo_factory = self.tzinfo_factory if settings.USE_TZ else None
+
+        # TODO: psycopg3 it shouldn't be needed. What should this do?
+        # cursor.tzinfo_factory = self.tzinfo_factory if settings.USE_TZ else None
         return cursor
 
-    def tzinfo_factory(self, offset):
-        return self.timezone
+    # def tzinfo_factory(self, offset):
+    #     return self.timezone
 
     @async_unsafe
     def chunked_cursor(self):
