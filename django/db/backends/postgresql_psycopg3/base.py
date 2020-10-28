@@ -209,7 +209,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     def ensure_timezone(self):
         if self.connection is None:
             return False
-        conn_timezone_name = self.connection.get_parameter_status('TimeZone')
+        conn_timezone_name = self.connection.pgconn.parameter_status(b"TimeZone").decode("ascii")
         timezone_name = self.timezone_name
         if timezone_name and conn_timezone_name != timezone_name:
             with self.connection.cursor() as cursor:
@@ -218,7 +218,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         return False
 
     def init_connection_state(self):
-        self.connection.set_client_encoding('UTF8')
+        self.connection.client_encoding = 'UTF8'
 
         timezone_changed = self.ensure_timezone()
         if timezone_changed:
@@ -326,7 +326,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     @cached_property
     def pg_version(self):
         with self.temporary_connection():
-            return self.connection.server_version
+            return self.connection.pgconn.server_version
 
     def make_debug_cursor(self, cursor):
         return CursorDebugWrapper(cursor, self)
