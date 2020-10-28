@@ -118,7 +118,7 @@ class DatabaseOperations(BaseDatabaseOperations):
         return '"%s"' % name
 
     def set_time_zone_sql(self):
-        return "SET TIME ZONE %s"
+        return "select set_config('TimeZone', %s, false)"
 
     def sql_flush(self, style, tables, *, reset_sequences=False, allow_cascade=False):
         if not tables:
