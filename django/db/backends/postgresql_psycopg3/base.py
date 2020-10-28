@@ -229,9 +229,11 @@ class DatabaseWrapper(BaseDatabaseWrapper):
     @async_unsafe
     def create_cursor(self, name=None):
         if name:
+            # TODO: server-side cursors
             # In autocommit mode, the cursor will be used outside of a
             # transaction, hence use a holdable cursor.
-            cursor = self.connection.cursor(name, scrollable=False, withhold=self.connection.autocommit)
+            # cursor = self.connection.cursor(name, scrollable=False, withhold=self.connection.autocommit)
+            cursor = self.connection.cursor()
         else:
             cursor = self.connection.cursor()
 
