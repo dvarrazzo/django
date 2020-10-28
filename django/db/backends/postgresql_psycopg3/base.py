@@ -164,7 +164,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
                 )
             )
         conn_params = {
-            'database': settings_dict['NAME'] or 'postgres',
+            'dbname': settings_dict['NAME'] or 'postgres',
             **settings_dict['OPTIONS'],
         }
         conn_params.pop('isolation_level', None)
