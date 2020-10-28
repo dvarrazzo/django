@@ -1,4 +1,15 @@
-import psycopg2
+try:
+    import psycopg2
+
+    def quote_value(value):
+        return psycopg2.extensions.adapt(value).getquoted().decode()
+
+except ImportError:
+    import psycopg3.sql
+
+    def quote_value(value):
+        return psycopg3.sql.quote(value)
+
 
 from django.db.models import (
     CharField, Expression, Field, FloatField, Func, Lookup, TextField, Value,
@@ -269,8 +280,7 @@ class SearchHeadline(Func):
             # getquoted() returns a quoted bytestring of the adapted value.
             options_params.append(', '.join(
                 '%s=%s' % (
-                    option,
-                    psycopg2.extensions.adapt(value).getquoted().decode(),
+                    option, quote_value(value),
                 ) for option, value in self.options.items()
             ))
             options_sql = ', %s'
