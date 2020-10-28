@@ -1,7 +1,15 @@
 import datetime
 import json
 
-from psycopg2.extras import DateRange, DateTimeTZRange, NumericRange, Range
+# TODO: psycopg3
+try:
+    from psycopg2.extras import DateRange, DateTimeTZRange, NumericRange, Range
+except ImportError:
+    DateRange = DateTimeTZRange = NumericRange = None
+
+    class Range:
+        pass
+
 
 from django.contrib.postgres import forms, lookups
 from django.db import models

@@ -1,8 +1,8 @@
 import functools
 
-import psycopg2
-from psycopg2 import ProgrammingError
-from psycopg2.extras import register_hstore
+# import psycopg2
+# from psycopg2 import ProgrammingError
+# from psycopg2.extras import register_hstore
 
 from django.db import connections
 from django.db.backends.base.base import NO_DB_ALIAS
@@ -37,6 +37,9 @@ def get_citext_oids(connection_alias):
 def register_type_handlers(connection, **kwargs):
     if connection.vendor != 'postgresql' or connection.alias == NO_DB_ALIAS:
         return
+
+    # TODO: psycopg3
+    return
 
     try:
         oids, array_oids = get_hstore_oids(connection.alias)

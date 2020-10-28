@@ -1,4 +1,8 @@
-from psycopg2.extras import DateRange, DateTimeTZRange, NumericRange
+try:
+    from psycopg2.extras import DateRange, DateTimeTZRange, NumericRange
+except ImportError:
+    # TODO
+    DateRange = DateTimeTZRange = NumericRange = None
 
 from django import forms
 from django.core import exceptions
