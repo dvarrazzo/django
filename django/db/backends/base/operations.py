@@ -602,6 +602,9 @@ class BaseDatabaseOperations:
     def combine_duration_expression(self, connector, sub_expressions):
         return self.combine_expression(connector, sub_expressions)
 
+    def json_placeholder_sql(self, value):
+        return '%s'
+
     def binary_placeholder_sql(self, value):
         """
         Some backends require special syntax to insert binary content (MySQL

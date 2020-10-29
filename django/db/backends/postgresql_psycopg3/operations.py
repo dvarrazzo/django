@@ -254,6 +254,9 @@ class DatabaseOperations(BaseDatabaseOperations):
             return ipaddress.ip_network(value)
         return None
 
+    def json_placeholder_sql(self, value):
+        return '%s::jsonb'
+
     def subtract_temporals(self, internal_type, lhs, rhs):
         if internal_type == 'DateField':
             lhs_sql, lhs_params = lhs

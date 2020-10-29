@@ -83,6 +83,9 @@ class JSONField(CheckFieldDefaultMixin, Field):
     def get_internal_type(self):
         return 'JSONField'
 
+    def get_placeholder(self, value, compiler, connection):
+        return connection.ops.json_placeholder_sql(value)
+
     def get_prep_value(self, value):
         if value is None:
             return value
