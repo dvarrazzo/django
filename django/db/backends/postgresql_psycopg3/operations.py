@@ -4,6 +4,8 @@
 from django.conf import settings
 from django.db.backends.base.operations import BaseDatabaseOperations
 
+from psycopg3.sql import SQL, Literal
+
 
 class DatabaseOperations(BaseDatabaseOperations):
     cast_char_field_without_max_length = 'varchar'
@@ -211,12 +213,12 @@ class DatabaseOperations(BaseDatabaseOperations):
             return ['DISTINCT'], []
 
     def last_executed_query(self, cursor, sql, params):
-        # https://www.psycopg.org/docs/cursor.html#cursor.query
-        # The query attribute is a Psycopg extension to the DB API 2.0.
-        # TODO: psycopg3
-        # if cursor.query is not None:
-        #     return cursor.query.decode()
-        return None
+        # Quick and dirty replace of %s placeholders with {} placeholders
+        # and use client-side composition of the query. However this is not
+        # the query really passed to the server: that's composed server-side.
+        sql = SQL(sql.replace("{", "{{").replace("}", "}}").replace("%s", "{}"))
+        params = (Literal(p) for p in params) if params else ()
+        return sql.format(*params).as_string(cursor)
 
     def return_insert_columns(self, fields):
         if not fields:
