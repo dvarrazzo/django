@@ -7,6 +7,16 @@ __all__ = [
 ]
 
 
+class Psycopg3Mixin:
+    """
+    Helper for psycopg3 to set a cast on integer parameters.
+    """
+    def as_postgresql(self, compiler, connection, **extra_context):
+        # currently psycopg3 passes the oid of numeric and postgres cannot find a cast
+        res = super().as_sql(compiler, connection, function=self.function, **extra_context)
+        return (res[0].replace("%s", "%s::integer"), res[1])
+
+
 class CumeDist(Func):
     function = 'CUME_DIST'
     output_field = FloatField()
@@ -49,7 +59,7 @@ class LagLeadFunction(Func):
         return sources[0].output_field
 
 
-class Lag(LagLeadFunction):
+class Lag(Psycopg3Mixin, LagLeadFunction):
     function = 'LAG'
 
 
@@ -59,11 +69,11 @@ class LastValue(Func):
     window_compatible = True
 
 
-class Lead(LagLeadFunction):
+class Lead(Psycopg3Mixin, LagLeadFunction):
     function = 'LEAD'
 
 
-class NthValue(Func):
+class NthValue(Psycopg3Mixin, Func):
     function = 'NTH_VALUE'
     window_compatible = True
 
@@ -79,7 +89,7 @@ class NthValue(Func):
         return sources[0].output_field
 
 
-class Ntile(Func):
+class Ntile(Psycopg3Mixin, Func):
     function = 'NTILE'
     output_field = IntegerField()
     window_compatible = True

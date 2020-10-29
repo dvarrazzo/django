@@ -26,8 +26,8 @@ try:
 except ImportError as e:
     raise ImproperlyConfigured("Error loading psycopg3 module: %s" % e)
 
+from psycopg3.oids import builtins
 from psycopg3.types.date import TimestamptzLoader
-from psycopg3.types.oids import builtins
 
 
 def psycopg3_version():
