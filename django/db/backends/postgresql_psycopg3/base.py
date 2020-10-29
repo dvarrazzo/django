@@ -26,6 +26,9 @@ try:
 except ImportError as e:
     raise ImproperlyConfigured("Error loading psycopg3 module: %s" % e)
 
+from psycopg3.types.date import TimestamptzLoader
+from psycopg3.types.oids import builtins
+
 
 def psycopg3_version():
     version = Database.__version__
@@ -33,7 +36,6 @@ def psycopg3_version():
 
 
 PSYCOPG3_VERSION = psycopg3_version()
-
 
 # Some of these import psycopg3, so import them after checking if it's installed.
 from .client import DatabaseClient                          # NOQA isort:skip
@@ -237,8 +239,10 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         else:
             cursor = self.connection.cursor()
 
-        # TODO: psycopg3 it shouldn't be needed. What should this do?
-        # cursor.tzinfo_factory = self.tzinfo_factory if settings.USE_TZ else None
+        # cursor.tzinfo_factory = self.tzinfo_factory
+        if not settings.USE_TZ:
+            ChopTzLoader.register(builtins["timestamptz"].oid, cursor)
+
         return cursor
 
     # def tzinfo_factory(self, offset):
@@ -332,6 +336,15 @@ class DatabaseWrapper(BaseDatabaseWrapper):
 
     def make_debug_cursor(self, cursor):
         return CursorDebugWrapper(cursor, self)
+
+
+class ChopTzLoader(TimestamptzLoader):
+    """
+    Load a Postgres timestamptz to a datetime discarding the timezone.
+    """
+    def load(self, data):
+        res = super().load(data)
+        return res.replace(tzinfo=None)
 
 
 class CursorDebugWrapper(BaseCursorDebugWrapper):
