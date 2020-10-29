@@ -28,6 +28,7 @@ except ImportError as e:
 
 from psycopg3.oids import builtins
 from psycopg3.types.date import TimestamptzLoader
+from psycopg3.types.text import TextLoader
 
 
 def psycopg3_version():
@@ -201,11 +202,6 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         #     if self.isolation_level != connection.isolation_level:
         #         connection.set_session(isolation_level=self.isolation_level)
 
-        # Register dummy loads() to avoid a round trip from psycopg2's decode
-        # to json.dumps() to json.loads(), when using a custom decoder in
-        # JSONField.
-        # TODO: equivalent for psycopg3 once merged to master
-        # psycopg2.extras.register_default_jsonb(conn_or_curs=connection, loads=lambda x: x)
         return connection
 
     def ensure_timezone(self):
@@ -233,6 +229,11 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         else:
             ConfigTzLoader.timezone = self.timezone
             ConfigTzLoader.register(builtins["timestamptz"].oid, self.connection)
+
+        # Register dummy loads() to avoid a round trip from psycopg3's decode
+        # to json.dumps() to json.loads(), when using a custom decoder in
+        # JSONField.
+        TextLoader.register(builtins["jsonb"].oid, self.connection)
 
     @async_unsafe
     def create_cursor(self, name=None):
