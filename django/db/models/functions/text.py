@@ -312,6 +312,11 @@ class Substr(Func):
     def as_oracle(self, compiler, connection, **extra_context):
         return super().as_sql(compiler, connection, function='SUBSTR', **extra_context)
 
+    def as_postgresql(self, compiler, connection, **extra_context):
+        # currently psycopg3 passes the oid of numeric and postgres cannot find a cast
+        res = super().as_sql(compiler, connection, function='SUBSTR', **extra_context)
+        return (res[0].replace("%s", "%s::integer"), res[1])
+
 
 class Trim(Transform):
     function = 'TRIM'
