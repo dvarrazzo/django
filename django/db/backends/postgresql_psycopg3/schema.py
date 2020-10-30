@@ -35,6 +35,23 @@ class DatabaseSchemaEditor(BaseDatabaseSchemaEditor):
 
     sql_delete_procedure = 'DROP FUNCTION %(procedure)s(%(param_types)s)'
 
+    def execute(self, sql, params=()):
+        # Merge the query client-side, as posgres won't do it server-side.
+
+        if params is None:
+            return super().execute(sql, params)
+
+        # Convert placeholders from %s to {}
+        sql = str(sql).replace("{", "{{").replace("}", "}}")
+        sql = sql.replace("%s", "{}").replace("%%", "%")
+
+        # Merge the parameter
+        params = (psycopg3.sql.Literal(p) for p in params)
+        sql = psycopg3.sql.SQL(sql).format(*params).as_string(None)
+
+        # Don't let the superclass touch anything.
+        return super().execute(sql, None)
+
     def quote_value(self, value):
         if isinstance(value, str):
             value = value.replace('%', '%%')
