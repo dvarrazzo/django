@@ -228,6 +228,12 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             if not self.get_autocommit():
                 self.connection.commit()
 
+        if not settings.USE_TZ:
+            ChopTzLoader.register(builtins["timestamptz"].oid, self.connection)
+        else:
+            ConfigTzLoader.timezone = self.timezone
+            ConfigTzLoader.register(builtins["timestamptz"].oid, self.connection)
+
     @async_unsafe
     def create_cursor(self, name=None):
         if name:
@@ -239,14 +245,7 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         else:
             cursor = self.connection.cursor()
 
-        # cursor.tzinfo_factory = self.tzinfo_factory
-        if not settings.USE_TZ:
-            ChopTzLoader.register(builtins["timestamptz"].oid, cursor)
-
         return cursor
-
-    # def tzinfo_factory(self, offset):
-    #     return self.timezone
 
     @async_unsafe
     def chunked_cursor(self):
@@ -345,6 +344,17 @@ class ChopTzLoader(TimestamptzLoader):
     def load(self, data):
         res = super().load(data)
         return res.replace(tzinfo=None)
+
+
+class ConfigTzLoader(TimestamptzLoader):
+    """
+    Load a Postgres timestamptz using the timezone specified by the config.
+    """
+    timezone = None
+
+    def load(self, data):
+        res = super().load(data)
+        return res.replace(tzinfo=self.timezone)
 
 
 class CursorDebugWrapper(BaseCursorDebugWrapper):
