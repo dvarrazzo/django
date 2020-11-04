@@ -1,6 +1,7 @@
 # TODO: psycopg3
 # from psycopg2.extras import Inet
 
+import ipaddress
 from django.conf import settings
 from django.db.backends.base.operations import BaseDatabaseOperations
 
@@ -250,9 +251,7 @@ class DatabaseOperations(BaseDatabaseOperations):
 
     def adapt_ipaddressfield_value(self, value):
         if value:
-            # TODO: implement for psycopg3
-            # return Inet(value)
-            return value
+            return ipaddress.ip_network(value)
         return None
 
     def subtract_temporals(self, internal_type, lhs, rhs):
