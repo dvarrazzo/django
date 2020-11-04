@@ -6,7 +6,7 @@ from itertools import chain
 from django.core.exceptions import EmptyResultSet, FieldError
 from django.db import DatabaseError, NotSupportedError
 from django.db.models.constants import LOOKUP_SEP
-from django.db.models.expressions import F, OrderBy, RawSQL, Ref, Value
+from django.db.models.expressions import F, OrderBy, RawSQL, Ref, Subquery, Value
 from django.db.models.functions import Cast, Random
 from django.db.models.query_utils import Q, select_related_descend
 from django.db.models.sql.constants import (
@@ -525,7 +525,8 @@ class SQLCompiler:
 
                 out_cols = []
                 col_idx = 1
-                for _, (s_sql, s_params), alias in self.select + extra_select:
+                subquery_to_idx = {}  # base1 output column of the expressions
+                for s_expr, (s_sql, s_params), alias in self.select + extra_select:
                     if alias:
                         s_sql = '%s AS %s' % (s_sql, self.connection.ops.quote_name(alias))
                     elif with_col_aliases:
@@ -533,6 +534,8 @@ class SQLCompiler:
                         col_idx += 1
                     params.extend(s_params)
                     out_cols.append(s_sql)
+                    if isinstance(s_expr, Subquery):
+                        subquery_to_idx[s_expr] = len(out_cols)
 
                 result += [', '.join(out_cols), 'FROM', *from_]
                 params.extend(f_params)
@@ -601,7 +604,14 @@ class SQLCompiler:
 
             if order_by:
                 ordering = []
-                for _, (o_sql, o_params, _) in order_by:
+                for o_expr, (o_sql, o_params, _) in order_by:
+                    if o_expr.expression in subquery_to_idx and o_sql.startswith("("):
+                        # Replace ORDER BY expressions with the position of the column index
+                        # If the query contains parameters, binding server-side will not consider
+                        # them equivalent, and DISTINCT+ORDER BY will fail.
+                        # TODO psycopg3: maybe add feature "support order column alias"?
+                        o_sql = str(subquery_to_idx[o_expr.expression]) + o_sql.rsplit(")", 1)[-1]
+                        o_params = []
                     ordering.append(o_sql)
                     params.extend(o_params)
                 result.append('ORDER BY %s' % ', '.join(ordering))
