@@ -526,9 +526,6 @@ class BaseDatabaseOperations:
         """
         return value or None
 
-    def adapt_json_value(self, value):
-        return value
-
     def year_lookup_bounds_for_date_field(self, value):
         """
         Return a two-elements list with the lower and upper bound to be used
@@ -604,9 +601,6 @@ class BaseDatabaseOperations:
 
     def combine_duration_expression(self, connector, sub_expressions):
         return self.combine_expression(connector, sub_expressions)
-
-    def json_placeholder_sql(self, value):
-        return '%s'
 
     def binary_placeholder_sql(self, value):
         """

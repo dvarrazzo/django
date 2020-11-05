@@ -83,20 +83,10 @@ class JSONField(CheckFieldDefaultMixin, Field):
     def get_internal_type(self):
         return 'JSONField'
 
-    def get_placeholder(self, value, compiler, connection):
-        return connection.ops.json_placeholder_sql(value)
-
     def get_prep_value(self, value):
         if value is None:
             return value
         return json.dumps(value, cls=self.encoder)
-
-    def get_db_prep_value(self, value, connection, prepared=False):
-        if not prepared:
-            value = self.get_prep_value(value)
-            return connection.ops.adapt_json_value(value)
-        else:
-            return value
 
     def get_transform(self, name):
         transform = super().get_transform(name)
@@ -140,19 +130,7 @@ def compile_json_path(key_transforms, include_root=True):
     return ''.join(path)
 
 
-class PostgresCastRhsJson:
-    def process_rhs(self, compiler, connection):
-        rhs, rhs_params = super().process_rhs(compiler, connection)
-        if connection.vendor == 'postgresql':
-            if rhs == "%s" and rhs_params == [None]:
-                rhs = "'null'"
-                rhs_params = []
-            else:
-                rhs = rhs + "::jsonb"
-        return rhs, rhs_params
-
-
-class DataContains(PostgresCastRhsJson, PostgresOperatorLookup):
+class DataContains(PostgresOperatorLookup):
     lookup_name = 'contains'
     postgres_operator = '@>'
 
@@ -167,7 +145,7 @@ class DataContains(PostgresCastRhsJson, PostgresOperatorLookup):
         return 'JSON_CONTAINS(%s, %s)' % (lhs, rhs), params
 
 
-class ContainedBy(PostgresCastRhsJson, PostgresOperatorLookup):
+class ContainedBy(PostgresOperatorLookup):
     lookup_name = 'contained_by'
     postgres_operator = '<@'
 
@@ -255,7 +233,7 @@ class HasAnyKeys(HasKeys):
     logical_operator = ' OR '
 
 
-class JSONExact(PostgresCastRhsJson, lookups.Exact):
+class JSONExact(lookups.Exact):
     can_use_none_as_rhs = True
 
     def process_lhs(self, compiler, connection):
@@ -275,8 +253,6 @@ class JSONExact(PostgresCastRhsJson, lookups.Exact):
         if connection.vendor == 'mysql':
             func = ["JSON_EXTRACT(%s, '$')"] * len(rhs_params)
             rhs = rhs % tuple(func)
-        # elif connection.vendor == 'postgresql':
-        #     rhs = rhs + "::jsonb"
         return rhs, rhs_params
 
 
@@ -419,8 +395,6 @@ class KeyTransformIn(lookups.In):
                 sql = "JSON_EXTRACT(%s, '$')"
         if connection.vendor == 'mysql' and connection.mysql_is_mariadb:
             sql = 'JSON_UNQUOTE(%s)' % sql
-        elif connection.vendor == 'postgresql':
-            sql = '%s::jsonb'
         return sql, params
 
 
@@ -509,19 +483,19 @@ class KeyTransformNumericLookupMixin:
         return rhs, rhs_params
 
 
-class KeyTransformLt(PostgresCastRhsJson, KeyTransformNumericLookupMixin, lookups.LessThan):
+class KeyTransformLt(KeyTransformNumericLookupMixin, lookups.LessThan):
     pass
 
 
-class KeyTransformLte(PostgresCastRhsJson, KeyTransformNumericLookupMixin, lookups.LessThanOrEqual):
+class KeyTransformLte(KeyTransformNumericLookupMixin, lookups.LessThanOrEqual):
     pass
 
 
-class KeyTransformGt(PostgresCastRhsJson, KeyTransformNumericLookupMixin, lookups.GreaterThan):
+class KeyTransformGt(KeyTransformNumericLookupMixin, lookups.GreaterThan):
     pass
 
 
-class KeyTransformGte(PostgresCastRhsJson, KeyTransformNumericLookupMixin, lookups.GreaterThanOrEqual):
+class KeyTransformGte(KeyTransformNumericLookupMixin, lookups.GreaterThanOrEqual):
     pass
 
 

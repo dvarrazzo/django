@@ -254,12 +254,6 @@ class DatabaseOperations(BaseDatabaseOperations):
             return ipaddress.ip_network(value)
         return None
 
-    def json_placeholder_sql(self, value):
-        return '%s'
-
-    def adapt_json_value(self, value):
-        return JsonWrapper(value) if value is not None else None
-
     def subtract_temporals(self, internal_type, lhs, rhs):
         if internal_type == 'DateField':
             lhs_sql, lhs_params = lhs
@@ -284,11 +278,3 @@ class DatabaseOperations(BaseDatabaseOperations):
 
     def ignore_conflicts_suffix_sql(self, ignore_conflicts=None):
         return 'ON CONFLICT DO NOTHING' if ignore_conflicts else super().ignore_conflicts_suffix_sql(ignore_conflicts)
-
-
-class JsonWrapper:
-    """
-    A thin wrapper to mark that a string is a json and use the right oid
-    """
-    def __init__(self, obj):
-        self.wrapped = obj

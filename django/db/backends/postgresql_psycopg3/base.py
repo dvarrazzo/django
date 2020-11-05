@@ -28,7 +28,7 @@ except ImportError as e:
 
 from psycopg3.oids import builtins
 from psycopg3.types.date import TimestamptzLoader
-from psycopg3.types.text import TextLoader, StringDumper
+from psycopg3.types.text import TextLoader
 
 
 def psycopg3_version():
@@ -43,7 +43,7 @@ from .client import DatabaseClient                          # NOQA isort:skip
 from .creation import DatabaseCreation                      # NOQA isort:skip
 from .features import DatabaseFeatures                      # NOQA isort:skip
 from .introspection import DatabaseIntrospection            # NOQA isort:skip
-from .operations import DatabaseOperations, JsonWrapper     # NOQA isort:skip
+from .operations import DatabaseOperations                  # NOQA isort:skip
 from .schema import DatabaseSchemaEditor                    # NOQA isort:skip
 
 # TODO: psycopg3 Should be automatic
@@ -230,16 +230,10 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             ConfigTzLoader.timezone = self.timezone
             ConfigTzLoader.register(builtins["timestamptz"].oid, self.connection)
 
-        # Register dummy loads() to avoid a round trip from psycopg3's decode
+        # Register a no-op dumper to avoid a round trip from psycopg3's decode
         # to json.dumps() to json.loads(), when using a custom decoder in
         # JSONField.
         TextLoader.register(builtins["jsonb"].oid, self.connection)
-
-        # Register a no-op dumper t  avoid a round trip from psycopg3's decode
-        # to json.dumps() to json.loads(), when using a custom decoder in
-        # JSONField.
-        TextLoader.register(JSONB_OID, self.connection)
-        JsonDumper.register(JsonWrapper, self.connection)
 
     @async_unsafe
     def create_cursor(self, name=None):
@@ -362,16 +356,6 @@ class ConfigTzLoader(TimestamptzLoader):
     def load(self, data):
         res = super().load(data)
         return res.replace(tzinfo=self.timezone)
-
-
-class JsonDumper(StringDumper):
-    """
-    Dump a json object already converted to string to the database.
-    """
-    oid = JSONB_OID
-
-    def dump(self, obj):
-        return super().dump(obj.wrapped)
 
 
 class CursorDebugWrapper(BaseCursorDebugWrapper):
