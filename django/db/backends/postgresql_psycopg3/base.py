@@ -229,6 +229,10 @@ class DatabaseWrapper(BaseDatabaseWrapper):
         # JSONField.
         TextLoader.register(builtins["jsonb"].oid, self.connection)
 
+        # Don't convert automatically from Postgres network types to Python ipaddress
+        TextLoader.register(builtins["inet"].oid, self.connection)
+        TextLoader.register(builtins["cidr"].oid, self.connection)
+
     @async_unsafe
     def create_cursor(self, name=None):
         if name:
