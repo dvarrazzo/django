@@ -224,12 +224,6 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             if not self.get_autocommit():
                 self.connection.commit()
 
-        if not settings.USE_TZ:
-            ChopTzLoader.register(builtins["timestamptz"].oid, self.connection)
-        else:
-            ConfigTzLoader.timezone = self.timezone
-            ConfigTzLoader.register(builtins["timestamptz"].oid, self.connection)
-
         # Register a no-op dumper to avoid a round trip from psycopg3's decode
         # to json.dumps() to json.loads(), when using a custom decoder in
         # JSONField.
@@ -245,6 +239,12 @@ class DatabaseWrapper(BaseDatabaseWrapper):
             cursor = self.connection.cursor()
         else:
             cursor = self.connection.cursor()
+
+        if settings.USE_TZ:
+            ConfigTzLoader.timezone = self.timezone
+            ConfigTzLoader.register(builtins["timestamptz"].oid, self.connection)
+        else:
+            ChopTzLoader.register(builtins["timestamptz"].oid, self.connection)
 
         return cursor
 
