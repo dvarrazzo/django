@@ -49,8 +49,12 @@ class DatabaseErrorWrapperTests(TestCase):
                 cursor.execute('DROP TABLE "X"')
         self.assertNotEqual(type(cm.exception), type(cm.exception.__cause__))
         self.assertIsNotNone(cm.exception.__cause__)
-        self.assertIsNotNone(cm.exception.__cause__.pgcode)
-        self.assertIsNotNone(cm.exception.__cause__.pgerror)
+        if connection.features.is_psycopg2:
+            self.assertIsNotNone(cm.exception.__cause__.pgcode)
+            self.assertIsNotNone(cm.exception.__cause__.pgerror)
+        if connection.features.is_psycopg3:
+            self.assertIsNotNone(cm.exception.__cause__.diag.sqlstate)
+            self.assertIsNotNone(cm.exception.__cause__.diag.message_primary)
 
 
 class LoadBackendTests(SimpleTestCase):
