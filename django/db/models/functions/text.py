@@ -140,6 +140,13 @@ class Left(Func):
     def as_sqlite(self, compiler, connection, **extra_context):
         return self.get_substr().as_sqlite(compiler, connection, **extra_context)
 
+    def as_postgresql(self, compiler, connection, **extra_context):
+        rv = self.as_sql(compiler, connection, **extra_context)
+        if connection.features.is_psycopg3:
+            from psycopg3.types.numeric import Int4
+            rv[1][0] = Int4(rv[1][0])
+        return rv
+
 
 class Length(Transform):
     """Return the number of characters in the expression."""
