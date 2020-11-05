@@ -526,6 +526,9 @@ class BaseDatabaseOperations:
         """
         return value or None
 
+    def adapt_json_value(self, value):
+        return value
+
     def year_lookup_bounds_for_date_field(self, value):
         """
         Return a two-elements list with the lower and upper bound to be used
