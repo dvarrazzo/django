@@ -147,6 +147,26 @@ class Combinable:
         )
 
 
+class PostgreSQLNumericMixin:
+    # types accepted by the server for server-side binding
+    _pg_types = {
+        Combinable.BITAND: 'Int8',
+        Combinable.BITOR: 'Int8',
+        Combinable.BITLEFTSHIFT: 'Int4',
+        Combinable.BITRIGHTSHIFT: 'Int4',
+        Combinable.BITXOR: 'Int8',
+    }
+
+    def as_postgresql(self, compiler, connection):
+        res = self.as_sql(compiler, connection)
+        if connection.features.is_psycopg3:
+            if self.connector in self._pg_types:
+                import psycopg3.types.numeric
+                Type = getattr(psycopg3.types.numeric, self._pg_types[self.connector])
+                res[1][0] = Type(res[1][0])
+        return res
+
+
 @deconstructible
 class BaseExpression:
     """Base class for all query expressions."""
@@ -439,7 +459,7 @@ def _resolve_combined_type(connector, lhs_type, rhs_type):
             return combined_type
 
 
-class CombinedExpression(SQLiteNumericMixin, Expression):
+class CombinedExpression(PostgreSQLNumericMixin, SQLiteNumericMixin, Expression):
 
     def __init__(self, lhs, connector, rhs, output_field=None):
         super().__init__(output_field=output_field)
