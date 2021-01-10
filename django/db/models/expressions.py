@@ -700,8 +700,13 @@ class Func(SQLiteNumericMixin, Expression):
         connection.ops.check_expression_support(self)
         sql_parts = []
         params = []
-        for arg in self.source_expressions:
+        for i, arg in enumerate(self.source_expressions):
             arg_sql, arg_params = compiler.compile(arg)
+            if connection.features.is_psycopg3 and self.psycopg3_arg_types() and not isinstance(arg, (Col, Func)):
+                arg_types = self.psycopg3_arg_types()
+                cast_type = arg_types[i]
+                arg_params = [cast_type(p) for p in arg_params]
+
             sql_parts.append(arg_sql)
             params.extend(arg_params)
         data = {**self.extra, **extra_context}
@@ -722,6 +727,10 @@ class Func(SQLiteNumericMixin, Expression):
         copy.source_expressions = self.source_expressions[:]
         copy.extra = self.extra.copy()
         return copy
+
+    @classmethod
+    def psycopg3_arg_types(cls):
+        return ()
 
 
 class Value(Expression):

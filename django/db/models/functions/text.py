@@ -4,6 +4,11 @@ from django.db.models.fields import CharField, IntegerField
 from django.db.models.functions import Coalesce
 from django.db.models.lookups import Transform
 
+try:
+    from psycopg3.types import Int4
+except ImportError:
+    pass
+
 
 class MySQLSHA2Mixin:
     def as_mysql(self, compiler, connection, **extra_content):
@@ -59,6 +64,16 @@ class Chr(Transform):
 
     def as_sqlite(self, compiler, connection, **extra_context):
         return super().as_sql(compiler, connection, function='CHAR', **extra_context)
+
+    def as_postgresql(self, compiler, connection, **extra_context):
+        sql, params = super().as_sql(compiler, connection, **extra_context)
+        if connection.features.is_psycopg3 and params:
+            params[0] = Int4(params[0])
+        return sql, params
+
+    @classmethod
+    def psycopg3_arg_types(cls):
+        return (Int4, )
 
 
 class ConcatPair(Func):
@@ -148,12 +163,9 @@ class Left(Func):
     def as_sqlite(self, compiler, connection, **extra_context):
         return self.get_substr().as_sqlite(compiler, connection, **extra_context)
 
-    def as_postgresql(self, compiler, connection, **extra_context):
-        rv = self.as_sql(compiler, connection, **extra_context)
-        if connection.features.is_psycopg3:
-            from psycopg3.types.numeric import Int4
-            rv[1][0] = Int4(rv[1][0])
-        return rv
+    @classmethod
+    def psycopg3_arg_types(cls):
+        return str, Int4
 
 
 class Length(Transform):
@@ -179,6 +191,11 @@ class LPad(Func):
         if not hasattr(length, 'resolve_expression') and length is not None and length < 0:
             raise ValueError("'length' must be greater or equal to 0.")
         super().__init__(expression, length, fill_text, **extra)
+
+    @classmethod
+    def psycopg3_arg_types(cls):
+        # string, length, filltext
+        return str, Int4, str
 
 
 class LTrim(Transform):
@@ -217,6 +234,11 @@ class Repeat(Func):
         length = None if number is None else Length(expression) * number
         rpad = RPad(expression, length, expression)
         return rpad.as_sql(compiler, connection, **extra_context)
+
+    @classmethod
+    def psycopg3_arg_types(cls):
+        # string, number
+        return str, Int4
 
 
 class Replace(Func):
@@ -327,10 +349,10 @@ class Substr(Func):
     def as_oracle(self, compiler, connection, **extra_context):
         return super().as_sql(compiler, connection, function='SUBSTR', **extra_context)
 
-    def as_postgresql(self, compiler, connection, **extra_context):
-        # currently psycopg3 passes the oid of numeric and postgres cannot find a cast
-        res = super().as_sql(compiler, connection, function='SUBSTR', **extra_context)
-        return (res[0].replace("%s", "%s::integer"), res[1])
+    @classmethod
+    def psycopg3_arg_types(cls):
+        # string, from, count
+        return str, Int4, Int4
 
 
 class Trim(Transform):
